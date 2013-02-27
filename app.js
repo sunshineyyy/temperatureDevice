@@ -38,10 +38,17 @@ MyApp.prototype.start = function() {
                          function(err,resp){
       });
     });
+    parent.loadScript("http://www.flotcharts.org/flot/jquery.flot.js",
+                       function(){
+      this_app.update();
+    });
   });
 };
 // This app has nothing to do on update
-MyApp.prototype.update = function(){};
+MyApp.prototype.update = function(){
+  var d2 = [[0, 3], [4, 8], [8, 5], [9, 13]];
+  $.plot("#id"+this.myuuid+"data", [  d2 ]);
+};
 
 ////////////////////////////////// Some "Private" Methods //////////////////////
 MyApp.prototype.getAllElements = function(){
