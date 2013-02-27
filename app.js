@@ -5,13 +5,13 @@
 //////////////////////////////////// Sub Class /////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-function MyApp(divobj,uuid,parent){
+function MyApp(divobj,uuid,dash){
   this.myuuid = uuid;
   if (!divobj) {
     throw "First argument must be a valid html object";
   }
   this.div = divobj;
-  this.dash = parent;
+  this.dash = dash;
 }
 MyApp.prototype = Object.create(AbstractApp.prototype);
 
@@ -38,7 +38,7 @@ MyApp.prototype.start = function() {
                          function(err,resp){
       });
     });
-    parent.loadScript("http://www.flotcharts.org/flot/jquery.flot.js",
+    this_app.dash.loadScript("http://www.flotcharts.org/flot/jquery.flot.js",
                        function(){
       this_app.update();
     });
@@ -47,7 +47,7 @@ MyApp.prototype.start = function() {
 // This app has nothing to do on update
 MyApp.prototype.update = function(){
   var d2 = [[0, 3], [4, 8], [8, 5], [9, 13]];
-  $.plot("#id"+this.myuuid+"data", [  d2 ]);
+  jQuery.plot("#id"+this.myuuid+"data", [  d2 ]);
 };
 
 ////////////////////////////////// Some "Private" Methods //////////////////////
