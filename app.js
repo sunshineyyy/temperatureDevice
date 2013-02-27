@@ -45,12 +45,28 @@ MyApp.prototype.start = function() {
       this_app.update();
     });
   });
+  this.setInterval(10*1000);
 };
-// This app has nothing to do on update
+
 MyApp.prototype.update = function(){
-    this.data_div.innerHTML = '';
-    var d = [[1,2],[2,4],[3,3]];
-    this.Flotr.draw(this.data_div,[d]);    
+  var now_epoch = (new Date()).getTime();
+  var http = new XMLHttpRequest();
+  var td;
+  var this_app = this;
+  http.open("GET","/?action=retrieve&uuid="+this.myuuid+"&since="+
+            (now_epoch-1000*60) );
+  http.onreadystatechange=function(){
+    if (http.readyState==4 && http.status == 200) {
+      var d = http.responseText;
+      var foo = -70;
+      td = d.split("\n").map(function(x){
+        foo = foo+10;
+        return [foo, parseFloat(x)];
+      });
+      this_app.Flotr.draw(this_app.data_div,[td]);
+    }
+  };
+  http.send();
 };
 
 ////////////////////////////////// Some "Private" Methods //////////////////////

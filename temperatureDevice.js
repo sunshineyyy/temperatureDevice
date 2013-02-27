@@ -2,18 +2,19 @@
 //  Dummy device.  invoked using nodejs
 //
 
-var fs   = require('fs');
-var HEL  = require('./httpEventListener.js').HttpEventListener;
-var OS   = require('os');
+var fs     = require('fs');
+var HEL    = require('./httpEventListener.js').HttpEventListener;
+var OS     = require('os');
 var crypto = require('crypto');
-var dgram = require('dgram');
-var rSPI = require('./rSPI');
-var http = require('http');
+var dgram  = require('dgram');
+var rSPI   = require('./rSPI');
+var http   = require('http');
+var url    = require('url');
 
 //some parameters.  they should go in a config file later:
 var app_code_path  = 'app.js';
 var html_code_path = 'app.html';
-var name           = 'Dummy Device';
+var name           = 'Temperature Device';
 var keystr = "obqQm3gtDFZdaYlENpIYiKzl+/qARDQRmiWbYhDW9wreM/APut73nnxCBJ8a7PwW";
 
 /////////////////////////////// A basic device /////////////////////////////////
@@ -55,15 +56,21 @@ function Device(listen_port) {
   this.addEventHandler('startLog',this.startLogging);
   this.addEventHandler('stopLog',this.stopLogging);
   
+  //manually attach
+  this.manager_IP = 'bioturk.ee.washington.edu';
+  this.manager_port = 9090;
+  this.my_IP = OS.networkInterfaces().eth0[0].address;
+  this.sendAction('addDevice',{port: listen_port, addr: this.my_IP},function(){});
   
   //advertise that i'm here every 10 seconds until i'm aquired
   var this_device = this;
-  this.advert_timer = setInterval(function(){
+  /*this.advert_timer = setInterval(function(){
     this_device.advertise('224.250.67.238',17768);
-  },10000);
+  },10000);*/
 }
 Device.prototype = Object.create(HEL.prototype);
 Device.prototype.constructor = Device;
+
 Device.prototype.advertise = function(mcastAddr,mport) {
   //broadcast on a specified multicast address/port that you exist
   // mcastAddr: the multicast address
@@ -81,6 +88,9 @@ Device.prototype.advertise = function(mcastAddr,mport) {
     udpsock.close();
   });
 };
+////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////EVENTS////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 Device.prototype.info = function(fields,response) {
   //
   // parses info request
@@ -193,7 +203,32 @@ Device.prototype.getTemp = function() {
 
   return temp;  
 };
-
+Device.prototype.sendAction = function(action,fields,callback) {
+  //
+  // sends action to manager.
+  // action: string - the action to send to manager
+  // fields: object - a hash of fields to send to in the request
+  // callback: called when done takes responce data as argument
+  //
+  var response_data = '';
+  fields.action = action;
+  var options = {
+    hostname: this.manager_IP,
+    port: this.manager_port,
+    path: url.format({query:fields, pathname:'/'}),
+    method: "GET"
+  };
+  console.log(options.path);
+  var actionReq = http.request(options,function(result){
+    result.on('data', function(chunk){
+      response_data += chunk;
+    });
+    result.on('end',function(){
+      callback(response_data);
+    });
+  });
+  actionReq.end();
+};
 ///////////////////////////////////// MAIN ////////////////////////////////////
 //if i'm being called from command line
 if(require.main === module) {
