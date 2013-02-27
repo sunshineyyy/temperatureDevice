@@ -7,6 +7,8 @@ var HEL  = require('./httpEventListener.js').HttpEventListener;
 var OS   = require('os');
 var crypto = require('crypto');
 var dgram = require('dgram');
+var rSPI = require('./rSPI');
+var http = require('http');
 
 //some parameters.  they should go in a config file later:
 var app_code_path  = 'app.js';
@@ -36,19 +38,29 @@ function Device(listen_port) {
   this.port   = listen_port;
   this.status = "ready"; //other options are "logging"
   this.state  = "none"; //no other state for such a simple device
+  
+  //some device state
+  this.logging_timer = null;
+  this.manager_port = null;
+  this.manager_IP = null;
 
   //add apps events here
-  this.addEventHandler('getCode',getCodeEvent); 
-  this.addEventHandler('getHTML',getHTMLEvent); 
+  this.addEventHandler('getCode',this.getCodeEvent); 
+  this.addEventHandler('getHTML',this.getHTMLEvent); 
   this.addEventHandler('info',this.info);
   this.addEventHandler('ping',this.info);
   this.addEventHandler('acquire',this.acquire);
+  
+  //custom events here
+  this.addEventHandler('startLog',this.startLogging);
+  this.addEventHandler('stopLog',this.stopLogging);
+  
   
   //advertise that i'm here every 10 seconds until i'm aquired
   var this_device = this;
   this.advert_timer = setInterval(function(){
     this_device.advertise('224.250.67.238',17768);
-  },10000) ;
+  },10000);
 }
 Device.prototype = Object.create(HEL.prototype);
 Device.prototype.constructor = Device;
@@ -99,7 +111,7 @@ Device.prototype.acquire = function(fields,response) {
   this.manager_IP  = fields['@ip'] ;
   clearInterval(this.advert_timer);
 };
-function getCodeEvent(event_data, response) {
+Device.prototype.getCodeEvent = function(event_data, response) {
   //gets the app code and sends it in the response body
   //response: the HTTP response
   
@@ -112,8 +124,8 @@ function getCodeEvent(event_data, response) {
       response.end('cannot read file \n' + err);
     }
   });
-}
-function getHTMLEvent(event_data, response) {
+};
+Device.prototype.getHTMLEvent = function(event_data, response) {
   //gets the app code and sends it in the response body
   //response: the HTTP response
   
@@ -126,15 +138,56 @@ function getHTMLEvent(event_data, response) {
       response.end('cannot read file \n' + err);
     }
   });
-}
+};
+
+////////////////NEW COMMANDS////////////////////////////
+Device.prototype.startLogging = function(fields, resp) {
+  "use strict";
+  var this_dev = this;
+  if(!this.logging_timer) {
+    this.logging_timer = setInterval(function(){
+      var options = {
+        hostname: this_dev.manager_IP,
+        port: this_dev.manager_port,
+        path: "/?action=store&uuid="+this_dev.uuid,
+        method: "POST"
+      };
+      var req = http.request(options, function(res){
+        //TODO: check response in non-demo code
+      });
+      req.on("error",function(e){
+        console.log("whoops "+e);
+      });
+      req.end(this_dev.getTemp().toString());
+    },10000); //10seconds
+  }
+};
+Device.prototype.stopLogging = function(fields,resp){
+  clearInterval(this.logging_timer);
+};
+////////////////HELPERS //////////////////////////////
+Device.prototype.getTemp = function() {
+  //
+  // Gets the temp from rpi.  Note this is blocking since the underlying
+  // call to ioctl is blocking.
+  // returns: the temp in deg C
+  //
+  var result = rSPI.readwriteSPI([96,0,0],'/dev/spidev0.1');
+  var adcread = ((result[1]<<2) | (result[2]>>>6))*3.3/1024;
+  var resistance = 3.3*10000/adcread - 10000;
+  
+  var a = 0.00113902;
+  var b = 0.000232276;
+  var c = 9.67879E-8;
+  var lr = Math.log(resistance);
+  var temp = -273.15+1/(a+b*lr+c*lr*lr*lr);
+
+  return temp;  
+};
 
 ///////////////////////////////////// MAIN ////////////////////////////////////
 //if i'm being called from command line
 if(require.main === module) {
-  var d1 = new Device(8080);
-  var d2;
-  setTimeout(function(){
-    d2 = new Device(8081);
-  },1000);
+  var d1 = new Device(8432);
 }
 
