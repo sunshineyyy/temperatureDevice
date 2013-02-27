@@ -161,9 +161,16 @@ Device.prototype.startLogging = function(fields, resp) {
       req.end(this_dev.getTemp().toString());
     },10000); //10seconds
   }
+  
+  //TODO: make response reflect success or fail
+  resp.writeHead(200, {'Content-Type': 'text/html'});
+  resp.end();
 };
 Device.prototype.stopLogging = function(fields,resp){
   clearInterval(this.logging_timer);
+  //TODO: make response reflect success or fail
+  resp.writeHead(200, {'Content-Type': 'text/html'});
+  resp.end();
 };
 ////////////////HELPERS //////////////////////////////
 Device.prototype.getTemp = function() {
