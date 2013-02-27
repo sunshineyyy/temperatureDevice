@@ -20,22 +20,24 @@ MyApp.prototype.start = function() {
   //
   //Starts app and loads gui.
   //
+  var this_app = this;
 
   //set some attributes for the app div
   this.div.style.backgroundColor = "#BBFFBB";
   
-  var this_app = this;
   this.getUIhtml(function(e,h){
     this_app.div.innerHTML = h;
     this_app.getAllElements();
-    this_app.send_button.addEventListener('click',function(){
-      var q = {};
-      q.xxxxxxx = "y&"+this_app.query_field.value; //lazy
-      this_app.sendEvent(this_app.event_field.value,
-                         q,function(err,resp){
-        this_app.dash.dbg(resp);
+    this_app.start_button.addEventListener('click',function(){
+      this_app.sendEvent('forward',{cmd: 'startLog',uuid: this_app.myuuid},
+                         function(err,resp){
       });
-    });   
+    });
+    this_app.stop_button.addEventListener('click',function(){
+      this_app.sendEvent('forward',{cmd: 'stopLog',uuid: this_app.myuuid},
+                         function(err,resp){
+      });
+    });
   });
 };
 // This app has nothing to do on update
@@ -43,9 +45,9 @@ MyApp.prototype.update = function(){};
 
 ////////////////////////////////// Some "Private" Methods //////////////////////
 MyApp.prototype.getAllElements = function(){
-  this.event_field = this.getElement("event_field");
-  this.query_field = this.getElement("query_field");
-  this.send_button = this.getElement("send_button");
+  this.data_div = this.getElement("data");
+  this.stop_button = this.getElement("stop");
+  this.start_button = this.getElement("start");
 };
 
 //spec says app needs to be named App

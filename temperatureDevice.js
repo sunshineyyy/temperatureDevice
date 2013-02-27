@@ -158,7 +158,9 @@ Device.prototype.startLogging = function(fields, resp) {
       req.on("error",function(e){
         console.log("whoops "+e);
       });
-      req.end(this_dev.getTemp().toString());
+      var t = this_dev.getTemp();
+      req.end(t.toString());
+      console.log('logging temp: '+t);
     },10000); //10seconds
   }
   
