@@ -2,14 +2,16 @@
 //  Dummy device.  invoked using nodejs
 //
 
+//NODE libraries
 var fs     = require('fs');
-var HEL    = require('./httpEventListener.js').HttpEventListener;
 var OS     = require('os');
 var crypto = require('crypto');
 var dgram  = require('dgram');
-var rSPI   = require('./rSPI');
 var http   = require('http');
 var url    = require('url');
+//My libraries
+var HEL    = require('./httpEventListener.js').HttpEventListener;
+var rSPI   = require('./rSPI');
 
 //some parameters.  they should go in a config file later:
 var app_code_path  = 'app.js';
@@ -24,43 +26,36 @@ function Device(listen_port) {
   //
   HEL.call(this,'cmd',listen_port);
   
-  //Compute uuid
-  var unique_str = OS.hostname()+listen_port;
-  if (OS.type() === 'Linux'){
-    //TODO: fill in for linux the MAC addr + listen_port
-    //unique_str = mac addr + listen_port;
-  } 
-  //make uuid from unique string, roughly following uuid v5 spec 
-  var hash = crypto.createHash('sha1').update(unique_str).digest('hex');
-  this.uuid = hash.substr(0,8)+"-"+hash.substr(8,4)+"-5"+hash.substr(12,3) +
-              "-b"+hash.substr(15,3)+"-"+hash.substr(18,12);
-              
   //init device info
   this.port   = listen_port;
   this.status = "ready"; //other options are "logging"
   this.state  = "none"; //no other state for such a simple device
+  this.uuid = this.computeUUID();
   
   //some device state
   this.logging_timer = null;
   this.manager_port = null;
   this.manager_IP = null;
 
-  //add apps events here
+  //standard events
   this.addEventHandler('getCode',this.getCodeEvent); 
   this.addEventHandler('getHTML',this.getHTMLEvent); 
   this.addEventHandler('info',this.info);
   this.addEventHandler('ping',this.info);
   this.addEventHandler('acquire',this.acquire);
   
-  //custom events here
+  //implementation specific events
+  //TODO: REPLACE THESE TWO EVENTS WITH YOUR OWN
   this.addEventHandler('startLog',this.startLogging);
   this.addEventHandler('stopLog',this.stopLogging);
   
-  //manually attach
+  //manually attach to manager.
   this.manager_IP = 'bioturk.ee.washington.edu';
   this.manager_port = 9090;
   this.my_IP = OS.networkInterfaces().eth0[0].address;
-  this.sendAction('addDevice',{port: listen_port, addr: this.my_IP},function(){});
+  this.sendAction('addDevice',
+                  {port: listen_port, addr: this.my_IP},
+                  function(){});
   
   //advertise that i'm here every 10 seconds until i'm aquired
   /*var this_device = this;
@@ -150,7 +145,8 @@ Device.prototype.getHTMLEvent = function(event_data, response) {
   });
 };
 
-////////////////NEW COMMANDS////////////////////////////
+////////////////////IMPLEMENTATION SPECIFIC COMMANDS////////////////////////////
+//TODO: REPLACE THESE (AND OR ADD MORE) HERE
 Device.prototype.startLogging = function(fields, resp) {
   "use strict";
   var this_dev = this;
@@ -164,14 +160,16 @@ Device.prototype.startLogging = function(fields, resp) {
       };
       var req = http.request(options, function(res){
         //TODO: check response in non-demo code
+        //TODO: make sure post did not fail
       });
       req.on("error",function(e){
+        //TODO: handle this more elegantly
         console.log("whoops "+e);
       });
       var t = this_dev.getTemp();
       req.end(t.toString());
       console.log('logging temp: '+t);
-    },10000); //10seconds
+    },10000); //10seconds //TODO: make this variable/not hard coded
   }
   
   //TODO: make response reflect success or fail
@@ -180,11 +178,10 @@ Device.prototype.startLogging = function(fields, resp) {
 };
 Device.prototype.stopLogging = function(fields,resp){
   clearInterval(this.logging_timer);
-  //TODO: make response reflect success or fail
   resp.writeHead(200, {'Content-Type': 'text/html'});
   resp.end();
 };
-////////////////HELPERS //////////////////////////////
+///////////////////////////////HELPER METHODS///////////////////////////////////
 Device.prototype.getTemp = function() {
   //
   // Gets the temp from rpi.  Note this is blocking since the underlying
@@ -210,6 +207,8 @@ Device.prototype.sendAction = function(action,fields,callback) {
   // fields: object - a hash of fields to send to in the request
   // callback: called when done takes responce data as argument
   //
+  
+  //TODO: response_data sholud probably be a buffer incase of binary data
   var response_data = '';
   fields.action = action;
   var options = {
@@ -229,7 +228,22 @@ Device.prototype.sendAction = function(action,fields,callback) {
   });
   actionReq.end();
 };
-///////////////////////////////////// MAIN ////////////////////////////////////
+Device.prototype.computeUUID = function(){
+  //
+  // Computes the Device's UUID from a combination of listen port and hostname
+  //
+  var unique_str = OS.hostname()+this.port;
+  if (OS.type() === 'Linux'){
+    //TODO: fill in for linux the MAC addr + listen_port
+    //unique_str = mac addr + listen_port;
+  } 
+  //make uuid from unique string, roughly following uuid v5 spec 
+  var hash = crypto.createHash('sha1').update(unique_str).digest('hex');
+  return uuid = hash.substr(0,8)+"-"+hash.substr(8,4)+"-5"+hash.substr(12,3) +
+              "-b"+hash.substr(15,3)+"-"+hash.substr(18,12);  
+};
+
+///////////////////////////////////// MAIN /////////////////////////////////////
 //if i'm being called from command line
 if(require.main === module) {
   var d1 = new Device(8432);
