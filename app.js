@@ -39,13 +39,13 @@ MyApp.prototype.start = function() {
       });
     });
     this_app.dash.loadScript(
-                   "http://www.humblesoftware.com//static/js/flotr2.min.js",
-                   function(){
-      this_app.Flotr = Flotr; //save ref to library
-      this_app.update();
+      "http://www.humblesoftware.com//static/js/flotr2.min.js",
+      function(){
+        this_app.Flotr = Flotr; //save ref to library
+        this_app.update();
     });
   });
-  this.setInterval(10*1000);
+  this.setUpdateInterval(10*1000);
 };
 
 MyApp.prototype.update = function(){

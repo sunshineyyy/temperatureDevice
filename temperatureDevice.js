@@ -63,8 +63,8 @@ function Device(listen_port) {
   this.sendAction('addDevice',{port: listen_port, addr: this.my_IP},function(){});
   
   //advertise that i'm here every 10 seconds until i'm aquired
-  var this_device = this;
-  /*this.advert_timer = setInterval(function(){
+  /*var this_device = this;
+  this.advert_timer = setInterval(function(){
     this_device.advertise('224.250.67.238',17768);
   },10000);*/
 }
